@@ -97,6 +97,18 @@ func main() {
 	rootCmd.AddCommand(yabaiCmd)
 
 	// momuri
+	// merge
+	mergeCmd := &cobra.Command{
+		Use:     "merge <id> <id>",
+		Aliases: []string{"m", "mg"},
+		Short:   "Merge two tasks into one",
+		Long:    "Merge two tasks into one. Keeps the first task's title, higher priority, and earlier due date.",
+		Args:    cobra.ExactArgs(2),
+		Run:     runMerge,
+	}
+	mergeCmd.Flags().StringP("title", "t", "", "Override merged task title")
+	rootCmd.AddCommand(mergeCmd)
+
 	momuriCmd := &cobra.Command{
 		Use:   "momuri",
 		Short: "Remove all active tasks",
@@ -281,6 +293,60 @@ func runRemove(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("Removed: #%d %s\n", id, title)
+}
+
+func runMerge(cmd *cobra.Command, args []string) {
+	id1, err := strconv.Atoi(args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid ID: %s\n", args[0])
+		os.Exit(1)
+	}
+	id2, err := strconv.Atoi(args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid ID: %s\n", args[1])
+		os.Exit(1)
+	}
+
+	t1 := store.Find(id1)
+	if t1 == nil {
+		fmt.Fprintf(os.Stderr, "Task #%d not found\n", id1)
+		os.Exit(1)
+	}
+	t2 := store.Find(id2)
+	if t2 == nil {
+		fmt.Fprintf(os.Stderr, "Task #%d not found\n", id2)
+		os.Exit(1)
+	}
+
+	// タイトル: 先のIDを採用、--titleで上書き可
+	title := t1.Title
+	if t, _ := cmd.Flags().GetString("title"); t != "" {
+		title = t
+	}
+
+	// 優先度: 高い方
+	priority := t1.Priority
+	if t2.Priority > priority {
+		priority = t2.Priority
+	}
+
+	// 期限: 早い方
+	due := t1.Due
+	if t1.Due == nil {
+		due = t2.Due
+	} else if t2.Due != nil && t2.Due.Before(*t1.Due) {
+		due = t2.Due
+	}
+
+	store.Update(id1, title, due, priority)
+	store.Delete(id2)
+
+	if err := store.Save(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Merged: #%d + #%d -> #%d %s\n", id1, id2, id1, title)
 }
 
 func runYabai(cmd *cobra.Command, args []string) {

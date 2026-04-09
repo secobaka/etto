@@ -127,6 +127,15 @@ func (s *Store) Add(title string, due *time.Time, priority Priority) Task {
 	return t
 }
 
+func (s *Store) Find(id int) *Task {
+	for i := range s.Tasks {
+		if s.Tasks[i].ID == id {
+			return &s.Tasks[i]
+		}
+	}
+	return nil
+}
+
 func (s *Store) Delete(id int) bool {
 	for i, t := range s.Tasks {
 		if t.ID == id {
