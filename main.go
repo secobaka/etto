@@ -114,7 +114,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 		Short:   "Show overdue & urgent tasks",
 		Run:     runYabai,
 	}
-	yabaiCmd.Flags().IntP("hours", "h", 24, "Hours threshold")
+	yabaiCmd.Flags().IntP("hours", "H", 24, "Hours threshold")
 	rootCmd.AddCommand(yabaiCmd)
 
 	// momuri
